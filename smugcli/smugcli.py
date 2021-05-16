@@ -117,28 +117,18 @@ def run(args, config=None, requests_sent=None):
     'cd',
     help='Change current working directory.',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  cd_parser.set_defaults(func=lambda a: fs.cd(a.user, a.path))
+  cd_parser.set_defaults(func=lambda a: fs.cd(a.path))
   cd_parser.add_argument('path',
                          type=arg_str_type,
                          nargs='?',
                          default=os.sep,
                          help='Path to new current directory.')
-  cd_parser.add_argument('-u', '--user',
-                         type=arg_str_type,
-                         default='',
-                         help=('User whose SmugMug account is to be accessed. '
-                               'Uses the logged-in user by default.'))
   # ---------------
   pwd_parser = subparsers.add_parser(
     'pwd',
     help='Print current working directory.',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  pwd_parser.set_defaults(func=lambda a: fs.pwd(a.user))
-  pwd_parser.add_argument('-u', '--user',
-                         type=arg_str_type,
-                         default='',
-                         help=('User whose SmugMug account is to be accessed. '
-                               'Uses the logged-in user by default.'))
+  pwd_parser.set_defaults(func=lambda a: fs.pwd())
   # ---------------
   for cmd, node_type in (('mkdir', 'Folder'), ('mkalbum', 'Album')):
     mkdir_parser = subparsers.add_parser(
@@ -168,7 +158,7 @@ def run(args, config=None, requests_sent=None):
                                     'default.'))
   # ---------------
   rmdir_parser = subparsers.add_parser(
-    'rmdir', help='Remove a folder(s) if they are empty.')
+    'rmdir', help='Remove one or more folders if they are empty.')
   rmdir_parser.set_defaults(func=lambda a: fs.rmdir(a.user, a.parents, a.dirs))
   rmdir_parser.add_argument('-p', '--parents',
                             action='store_true',

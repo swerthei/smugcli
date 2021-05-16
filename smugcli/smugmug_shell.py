@@ -23,7 +23,7 @@ class SmugMugShell(cmd.Cmd):
     return True
 
   def setprompt(self):
-    self.prompt = '(' + self.user + ') ' + self._fs.cwd + ': '
+    self.prompt = f'({self.user}) {self._fs.cwd}: '
   
   def preloop(self):
     self.setprompt()

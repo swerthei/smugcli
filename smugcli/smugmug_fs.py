@@ -76,7 +76,7 @@ class SmugMugFS(object):
   def path_to_node(self, user, path):
     current_node = self.get_root_node(user)
     parts = []
-    if len(path) == 0 or path[0] != os.sep:
+    if user == self._smugmug.get_auth_user() and (len(path) == 0 or path[0] != os.sep):
       parts.extend(list(filter(bool, self._cwd.split(os.sep))))
     parts.extend(list(filter(bool, path.split(os.sep))))
     nodes = [current_node]
@@ -223,8 +223,8 @@ class SmugMugFS(object):
           abbrev = 'U'
         print(f'{abbrev} {name}')
 
-  def cd(self, user, path):
-    user = user or self._smugmug.get_auth_user()
+  def cd(self, path):
+    user = self._smugmug.get_auth_user()
     matched_nodes, unmatched_dirs = self.path_to_node(user, path)
 
     newcd = matched_nodes[-1].path
@@ -241,11 +241,7 @@ class SmugMugFS(object):
     self._cwd = newcd
     print(self._cwd)
 
-  def pwd(self, user):
-    if self._cwd is None:
-      print("Current directory not set.")
-      return
-
+  def pwd(self):
     print(self._cwd)
 
   def make_node(self, user, paths, create_parents, node_type, privacy):
