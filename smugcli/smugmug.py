@@ -49,7 +49,7 @@ class ChildCacheGarbageCollector(object):
   """Garbage collector for clearing the node's children cache.
 
   Because multiple threads could process the same nodes in parallel, the nodes
-  and their children are cached so that we only fetch nodes once form the
+  and their children are cached so that we only fetch nodes once from the
   server. It's important to eventually clear this cache though, otherwise the
   JSON data of the whole SmugMug account could end up being stored in memory
   after a complete sync.  This garbage collector trims the node tree by clearing
@@ -161,7 +161,7 @@ class Node(object):
     if self._parent is not None:
       return os.path.join(self._parent.path, self.name)
     else:
-      return self.name
+      return os.sep + self.name
 
   def get(self, url_name, **kwargs):
     uri = self.uri(url_name)
@@ -433,6 +433,11 @@ class SmugMug(object):
     reply = self.get_json(path, **kwargs)
     return Wrapper(self, reply, parent)
 
+  def getu(self, url):
+    req = requests.Request('GET', url, auth=self.oauth).prepare()
+    resp = self._session.send(req)
+    return resp
+  
   def post(self, path, data=None, json=None, **kwargs):
     req = requests.Request('POST',
                            API_ROOT + path,

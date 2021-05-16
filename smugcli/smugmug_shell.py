@@ -8,14 +8,33 @@ import re
 
 class SmugMugShell(cmd.Cmd):
   intro = 'Welcome to the SmugMug shell.   Type help or ? to list commands.\n'
-  prompt = '(smugmug) '
-  file = None
+  baseprompt = '(smugmug) '
   _cmd_list_re = re.compile(r'.*\{([a-z,]+)\}', re.DOTALL)
 
   def __init__(self, fs):
     cmd.Cmd.__init__(self)
     self._fs = fs
+    self.user = fs.smugmug.get_auth_user()
 
+  def do_exit(self, arg):
+    return True
+    
+  def do_quit(self, arg):
+    return True
+
+  def setprompt(self):
+    self.prompt = '(' + self.user + ') ' + self._fs.cwd + ': '
+  
+  def preloop(self):
+    self.setprompt()
+
+  def emptyline(self):
+    return
+  
+  def postcmd(self, stop, line):
+    self.setprompt()
+    return stop
+  
   @classmethod
   def set_parser(cls, parser):
     usage = parser.format_usage()

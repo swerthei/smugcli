@@ -52,6 +52,7 @@ class SmugMugFS(object):
   def __init__(self, smugmug):
     self._smugmug = smugmug
     self._aborting = False
+    self._cwd = os.sep
 
     # Pre-compute some common variables.
     self._media_ext = [
@@ -62,6 +63,10 @@ class SmugMugFS(object):
   def smugmug(self):
     return self._smugmug
 
+  @property
+  def cwd(self):
+    return self._cwd
+
   def abort(self):
     self._aborting = True
 
@@ -70,19 +75,27 @@ class SmugMugFS(object):
 
   def path_to_node(self, user, path):
     current_node = self.get_root_node(user)
-    parts = list(filter(bool, path.split(os.sep)))
+    parts = []
+    if len(path) == 0 or path[0] != os.sep:
+      parts.extend(list(filter(bool, self._cwd.split(os.sep))))
+    parts.extend(list(filter(bool, path.split(os.sep))))
     nodes = [current_node]
     return self._match_nodes(nodes, parts)
 
   def _match_nodes(self, matched_nodes, dirs):
     unmatched_dirs = collections.deque(dirs)
     for dir in dirs:
-      child_node = matched_nodes[-1].get_child(dir)
-      if not child_node:
-        break
+      if dir == '..':
+        if len(matched_nodes) > 1:
+          matched_nodes.pop(-1)
+      else:
+        child_node = matched_nodes[-1].get_child(dir)
+        if not child_node:
+          break
+        matched_nodes.append(child_node)
 
-      matched_nodes.append(child_node)
       unmatched_dirs.popleft()
+      
     return matched_nodes, list(unmatched_dirs)
 
   def _match_or_create_nodes(self, matched_nodes, dirs, node_type, privacy):
@@ -105,6 +118,12 @@ class SmugMugFS(object):
   def get(self, url):
     scheme, netloc, path, query, fragment = urllib.parse.urlsplit(url)
     params = urllib.parse.parse_qs(query)
+    #print(f'url      = {url}')
+    #print(f'scheme   = {scheme}')
+    #print(f'netloc   = {netloc}')
+    #print(f'path     = {path}')
+    #print(f'query    = {query}')
+    #print(f'fragment = {fragment}')
     result = self._smugmug.get_json(path, params=params)
     print(json.dumps(result, sort_keys=True, indent=2, separators=(',', ': ')))
 
@@ -132,16 +151,57 @@ class SmugMugFS(object):
                                                       set(original_ignore)))
       configs['ignore'] = updated_ignore
 
-  def ls(self, user, path, details):
+  def download(self, user, path):
     user = user or self._smugmug.get_auth_user()
     matched_nodes, unmatched_dirs = self.path_to_node(user, path)
+
     if unmatched_dirs:
       print('"%s" not found in "%s".' % (
-        unmatched_dirs[0], os.sep.join(m.name for m in matched_nodes)))
+        unmatched_dirs[0], matched_nodes[-1].path))
       return
 
     node = matched_nodes[-1]
-    nodes = ([(path, node)] if 'FileName' in node else
+    if 'FileName' not in node.json:
+      print('Not a downloadable file.')
+      return
+
+    filename = node.json['FileName']
+    if node.json['IsVideo']:
+      downloaduri = node.json['Uris']['LargestVideo']['Uri']
+      result = self._smugmug.get_json(downloaduri)
+      downloadurl = result['Response']['LargestVideo']['Url']
+    else:
+      downloaduri = node.json['Uris']['ImageDownload']['Uri']
+      result = self._smugmug.get_json(downloaduri)
+      downloadurl = result['Response']['ImageDownload']['Url']
+    
+    print(f'File Name: {filename}')
+    print(f'Image Download URI: {downloaduri}')
+    print(f'Download URL: {downloadurl}')
+
+    response = self._smugmug.getu(downloadurl)
+    file = open(filename, "wb")
+    file.write(response.content)
+    file.close()
+
+    
+  ftypes = {
+    'Folder': 'D',
+    'Album': 'A',
+    'System Album': 'S'
+    }
+
+  def ls(self, user, path, details, directory):
+    user = user or self._smugmug.get_auth_user()
+    matched_nodes, unmatched_dirs = self.path_to_node(user, path)
+
+    if unmatched_dirs:
+      print('"%s" not found in "%s".' % (
+        unmatched_dirs[0], matched_nodes[-1].path))
+      return
+
+    node = matched_nodes[-1]
+    nodes = ([(path, node)] if 'FileName' in node or directory else
              [(child.name, child) for child in node.get_children()])
 
     for name, node in nodes:
@@ -149,7 +209,44 @@ class SmugMugFS(object):
         print(json.dumps(node.json, sort_keys=True, indent=2,
                          separators=(',', ': ')))
       else:
-        print(name)
+        if 'Type' in node.json:
+          if node.json['Type'] in self.ftypes:
+            abbrev = self.ftypes[node.json['Type']]
+          else:
+            abbrev = 'Unknown Type'
+        elif 'FileName' in node.json:
+          if node.json['IsVideo']:
+            abbrev = 'V'
+          else:
+            abbrev = 'P'
+        else:
+          abbrev = 'U'
+        print(f'{abbrev} {name}')
+
+  def cd(self, user, path):
+    user = user or self._smugmug.get_auth_user()
+    matched_nodes, unmatched_dirs = self.path_to_node(user, path)
+
+    newcd = matched_nodes[-1].path
+    
+    if unmatched_dirs:
+      print('"%s" not found in "%s".' % (
+        unmatched_dirs[0], newcd))
+      return
+
+    if 'FileName' in matched_nodes[-1].json:
+      print(f'{newcd} is not a Folder or Album')
+      return
+    
+    self._cwd = newcd
+    print(self._cwd)
+
+  def pwd(self, user):
+    if self._cwd is None:
+      print("Current directory not set.")
+      return
+
+    print(self._cwd)
 
   def make_node(self, user, paths, create_parents, node_type, privacy):
     user = user or self._smugmug.get_auth_user()
@@ -157,7 +254,7 @@ class SmugMugFS(object):
       matched_nodes, unmatched_dirs = self.path_to_node(user, path)
       if len(unmatched_dirs) > 1 and not create_parents:
         print('"%s" not found in "%s".' % (
-          unmatched_dirs[0], os.sep.join(m.name for m in matched_nodes)))
+          unmatched_dirs[0], matched_nodes[-1].path))
         continue
 
       if not len(unmatched_dirs):
@@ -177,7 +274,7 @@ class SmugMugFS(object):
 
       matched_nodes.pop(0)
       while matched_nodes:
-        current_dir = os.sep.join(m.name for m in matched_nodes)
+        current_dir = matched_nodes[-1].path
         node = matched_nodes.pop()
         if len(node.get_children({'count': 1})):
           print('Cannot delete %s: "%s" is not empty.' % (
@@ -269,7 +366,7 @@ class SmugMugFS(object):
 
     if deprecated_target:
       print('-t/--target argument no longer exists.')
-      print('Specify the target folder as the last positinal argument.')
+      print('Specify the target folder as the last positional argument.')
       return
 
     # The argparse library doesn't seem to support having two positional

@@ -61,7 +61,7 @@ def run(args, config=None, requests_sent=None):
 
   # ---------------
   login_parser = subparsers.add_parser(
-    'login', help='Login onto the SmugMug service')
+    'login', help='Login to the SmugMug service')
   login_parser.set_defaults(func=lambda a: fs.smugmug.login((a.key, a.secret)))
   login_parser.add_argument('--key',
                             type=arg_str_type,
@@ -91,11 +91,11 @@ def run(args, config=None, requests_sent=None):
     'ls',
     help='List the content of a folder or album.',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.l))
+  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.l, a.d))
   ls_parser.add_argument('path',
                          type=arg_str_type,
                          nargs='?',
-                         default=os.sep,
+                         default='',
                          help='Path to list.')
   ls_parser.add_argument('-l',
                          help=('Show the full JSON description of the node '
@@ -103,7 +103,38 @@ def run(args, config=None, requests_sent=None):
                                'which can be used to fetch the URIs listed in '
                                'the JSON description.'),
                          action='store_true')
+  ls_parser.add_argument('-d',
+                         help=('Force listing of only the named directory'
+                               'instead of expanding it.'),
+                         action='store_true')
   ls_parser.add_argument('-u', '--user',
+                         type=arg_str_type,
+                         default='',
+                         help=('User whose SmugMug account is to be accessed. '
+                               'Uses the logged-in user by default.'))
+  # ---------------
+  cd_parser = subparsers.add_parser(
+    'cd',
+    help='Change current working directory.',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  cd_parser.set_defaults(func=lambda a: fs.cd(a.user, a.path))
+  cd_parser.add_argument('path',
+                         type=arg_str_type,
+                         nargs='?',
+                         default=os.sep,
+                         help='Path to new current directory.')
+  cd_parser.add_argument('-u', '--user',
+                         type=arg_str_type,
+                         default='',
+                         help=('User whose SmugMug account is to be accessed. '
+                               'Uses the logged-in user by default.'))
+  # ---------------
+  pwd_parser = subparsers.add_parser(
+    'pwd',
+    help='Print current working directory.',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  pwd_parser.set_defaults(func=lambda a: fs.pwd(a.user))
+  pwd_parser.add_argument('-u', '--user',
                          type=arg_str_type,
                          default='',
                          help=('User whose SmugMug account is to be accessed. '
@@ -150,7 +181,7 @@ def run(args, config=None, requests_sent=None):
                                   'Uses the logged-in user by default.'))
   rmdir_parser.add_argument('dirs',
                             type=arg_str_type,
-                            nargs='+', help='Directories to create.')
+                            nargs='+', help='Folder(s) to remove.')
   # ---------------
   rm_parser = subparsers.add_parser(
     'rm', help='Remove files from SmugMug.')
@@ -169,7 +200,7 @@ def run(args, config=None, requests_sent=None):
                          help=('Recursively delete all of folder\'s content.'))
   rm_parser.add_argument('paths',
                          type=arg_str_type,
-                         nargs='+', help='Path to remove.')
+                         nargs='+', help='Path(s) to remove.')
   # ---------------
   upload_parser = subparsers.add_parser(
     'upload', help='Upload files to SmugMug.')
@@ -186,6 +217,19 @@ def run(args, config=None, requests_sent=None):
                              help=('User whose SmugMug account is to be '
                                    'accessed. Uses the logged-in user by '
                                    'default.'))
+  # ---------------
+  download_parser = subparsers.add_parser(
+    'download', help='Download one file from SmugMug.')
+  download_parser.set_defaults(func=lambda a: fs.download(a.user, a.path))
+  download_parser.add_argument('path',
+                               type=arg_str_type,
+                               help='SmugMug file to download.')
+  download_parser.add_argument('-u', '--user',
+                               type=arg_str_type,
+                               default='',
+                               help=('User whose SmugMug account is to be '
+                                     'accessed. Uses the logged-in user by '
+                                     'default.'))
   # ---------------
   sync_parser = subparsers.add_parser(
     'sync',
