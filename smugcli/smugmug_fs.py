@@ -180,9 +180,8 @@ class SmugMugFS(object):
     print(f'Download URL: {downloadurl}')
 
     response = self._smugmug.get_stream(downloadurl)
-    print(f'response={response}')
     with open(filename, 'wb') as f:
-      for chunk in response.iter_content(chunk_size=8192): 
+      for chunk in response.iter_content(chunk_size=10485760): 
         f.write(chunk)
     response.close()
 
