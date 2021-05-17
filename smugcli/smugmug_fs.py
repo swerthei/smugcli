@@ -179,19 +179,21 @@ class SmugMugFS(object):
     print(f'Image Download URI: {downloaduri}')
     print(f'Download URL: {downloadurl}')
 
-    response = self._smugmug.getu(downloadurl)
-    file = open(filename, "wb")
-    file.write(response.content)
-    file.close()
+    response = self._smugmug.get_stream(downloadurl)
+    print(f'response={response}')
+    with open(filename, 'wb') as f:
+      for chunk in response.iter_content(chunk_size=8192): 
+        f.write(chunk)
+    response.close()
 
     
   ftypes = {
-    'Folder': 'D',
+    'Folder': 'F',
     'Album': 'A',
     'System Album': 'S'
     }
 
-  def ls(self, user, path, details, directory):
+  def ls(self, user, path, details, directory, bare):
     user = user or self._smugmug.get_auth_user()
     matched_nodes, unmatched_dirs = self.path_to_node(user, path)
 

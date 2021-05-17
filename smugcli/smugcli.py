@@ -63,11 +63,11 @@ def run(args, config=None, requests_sent=None):
   login_parser = subparsers.add_parser(
     'login', help='Login to the SmugMug service')
   login_parser.set_defaults(func=lambda a: fs.smugmug.login((a.key, a.secret)))
-  login_parser.add_argument('--key',
+  login_parser.add_argument('-k', '--key',
                             type=arg_str_type,
                             required=True,
                             help='SmugMug API key')
-  login_parser.add_argument('--secret',
+  login_parser.add_argument('-s', '--secret',
                             type=arg_str_type,
                             required=True,
                             help='SmugMug API secret')
@@ -91,21 +91,32 @@ def run(args, config=None, requests_sent=None):
     'ls',
     help='List the content of a folder or album.',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.l, a.d))
+  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.long, a.directory, a.bare))
   ls_parser.add_argument('path',
                          type=arg_str_type,
                          nargs='?',
                          default='',
                          help='Path to list.')
-  ls_parser.add_argument('-l',
+  ls_parser.add_argument('-l', '--long',
                          help=('Show the full JSON description of the node '
                                'listed. Useful with `smugcli.py get ...`, '
                                'which can be used to fetch the URIs listed in '
                                'the JSON description.'),
                          action='store_true')
-  ls_parser.add_argument('-d',
+  ls_parser.add_argument('-d', '--directory',
                          help=('Force listing of only the named directory'
                                'instead of expanding it.'),
+                         action='store_true')
+  ls_parser.add_argument('-b', '--bare',
+                         help=('Do not display entry type codes. '
+                               'If this option is not specified then each entry will be'
+                               'prefixed with one of the following characters:'
+                               ' F (Folder),'
+                               ' A (Album),'
+                               ' S (System Album),'
+                               ' P (Photo),'
+                               ' V (Video),'
+                               ' U (Unknown)'),
                          action='store_true')
   ls_parser.add_argument('-u', '--user',
                          type=arg_str_type,

@@ -433,9 +433,9 @@ class SmugMug(object):
     reply = self.get_json(path, **kwargs)
     return Wrapper(self, reply, parent)
 
-  def getu(self, url):
+  def get_stream(self, url):
     req = requests.Request('GET', url, auth=self.oauth).prepare()
-    resp = self._session.send(req)
+    resp = self._session.send(req, stream=True)
     return resp
   
   def post(self, path, data=None, json=None, **kwargs):

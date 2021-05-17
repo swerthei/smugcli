@@ -5,6 +5,7 @@ import os
 import shlex
 import sys
 import re
+import traceback
 
 class SmugMugShell(cmd.Cmd):
   intro = 'Welcome to the SmugMug shell.   Type help or ? to list commands.\n'
@@ -46,6 +47,7 @@ class SmugMugShell(cmd.Cmd):
           parsed = parser.parse_args([command] + shlex.split(args))
           parsed.func(parsed)
         except:
+          traceback.print_exc()
           pass
       return handler
 
@@ -54,6 +56,7 @@ class SmugMugShell(cmd.Cmd):
         try:
           parser.parse_args([command, '--help'])
         except:
+          traceback.print_exc()
           pass
       return handler
 
