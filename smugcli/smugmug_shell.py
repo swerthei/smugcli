@@ -46,6 +46,8 @@ class SmugMugShell(cmd.Cmd):
         try:
           parsed = parser.parse_args([command] + shlex.split(args))
           parsed.func(parsed)
+        except SystemExit:
+          pass
         except:
           traceback.print_exc()
           pass
@@ -56,7 +58,6 @@ class SmugMugShell(cmd.Cmd):
         try:
           parser.parse_args([command, '--help'])
         except:
-          traceback.print_exc()
           pass
       return handler
 

@@ -147,16 +147,16 @@ def run(args, config=None, requests_sent=None):
       help='Create a %s.' % node_type.lower(),
       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     mkdir_parser.set_defaults(
-      func=lambda a, t=node_type: fs.make_node(a.user, a.path, a.p, t,
+      func=lambda a, t=node_type: fs.make_node(a.user, a.path, a.parents, t,
                                                a.privacy.title()))
     mkdir_parser.add_argument('path',
                               type=arg_str_type,
                               nargs='+',
                               help='%ss to create.' % node_type)
-    mkdir_parser.add_argument('-p',
+    mkdir_parser.add_argument('-p', '--parents',
                               action='store_true',
                               help='Create parents if they are missing.')
-    mkdir_parser.add_argument('--privacy',
+    mkdir_parser.add_argument('-v', '--privacy',
                               type=arg_str_type,
                               default='public',
                               choices=['public', 'private', 'unlisted'],
@@ -187,7 +187,7 @@ def run(args, config=None, requests_sent=None):
   rm_parser = subparsers.add_parser(
     'rm', help='Remove files from SmugMug.')
   rm_parser.set_defaults(
-    func=lambda a: fs.rm(a.user, a.force, a.recursive, a.paths))
+    func=lambda a: fs.rm(a.user, a.force, a.recursive, a.path))
   rm_parser.add_argument('-u', '--user',
                          type=arg_str_type,
                          default='',
@@ -199,7 +199,7 @@ def run(args, config=None, requests_sent=None):
   rm_parser.add_argument('-r', '--recursive',
                          action='store_true',
                          help=('Recursively delete all of folder\'s content.'))
-  rm_parser.add_argument('paths',
+  rm_parser.add_argument('path',
                          type=arg_str_type,
                          nargs='+', help='Path(s) to remove.')
   # ---------------

@@ -88,6 +88,8 @@ class SmugMugFS(object):
       if dir == '..':
         if len(matched_nodes) > 1:
           matched_nodes.pop(-1)
+      if dir == '.':
+        pass
       else:
         child_node = matched_nodes[-1].get_child(dir)
         if not child_node:
@@ -209,6 +211,8 @@ class SmugMugFS(object):
       if details:
         print(json.dumps(node.json, sort_keys=True, indent=2,
                          separators=(',', ': ')))
+      elif bare:
+        print(name)
       else:
         if 'Type' in node.json:
           if node.json['Type'] in self.ftypes:
@@ -261,7 +265,7 @@ class SmugMugFS(object):
       self._match_or_create_nodes(
         matched_nodes, unmatched_dirs, node_type, privacy)
 
-  def rmdir(self, user, parents, dirs):
+  def rmdir(self, user, remove_parents, dirs):
     user = user or self._smugmug.get_auth_user()
     for dir in dirs:
       matched_nodes, unmatched_dirs = self.path_to_node(user, dir)
@@ -269,7 +273,7 @@ class SmugMugFS(object):
         print('Folder or album "%s" not found.' % dir)
         continue
 
-      matched_nodes.pop(0)
+      matched_nodes.pop(0) # don't try to remove the root directory
       while matched_nodes:
         current_dir = matched_nodes[-1].path
         node = matched_nodes.pop()
@@ -281,7 +285,7 @@ class SmugMugFS(object):
         print('Deleting "%s".' % current_dir)
         node.delete()
 
-        if not parents:
+        if not remove_parents:
           break
 
   def _ask(self, question):
@@ -293,7 +297,8 @@ class SmugMugFS(object):
     for path in paths:
       matched_nodes, unmatched_dirs = self.path_to_node(user, path)
       if unmatched_dirs:
-        print('"%s" not found.' % path)
+        print('"%s" not found in "%s".' % (
+          unmatched_dirs[0], matched_nodes[-1].path))
         continue
 
       node = matched_nodes[-1]

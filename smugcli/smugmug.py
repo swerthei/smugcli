@@ -177,7 +177,10 @@ class Node(object):
 
   def delete(self, **kwargs):
     uri = self._json.get('Uri')
-    return self._smugmug.delete(uri, **kwargs)
+    ret = self._smugmug.delete(uri, **kwargs)
+    if self._parent is not None and self._parent._child_nodes_by_name is not None:
+      del self._parent._child_nodes_by_name[self.name]
+    return ret
 
   def upload(self, uri_name, filename, data, progress_fn=None, headers=None):
     uri = self.uri(uri_name)
