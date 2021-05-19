@@ -88,7 +88,7 @@ class SmugMugFS(object):
       if dir == '..':
         if len(matched_nodes) > 1:
           matched_nodes.pop(-1)
-      if dir == '.':
+      elif dir == '.':
         pass
       else:
         child_node = matched_nodes[-1].get_child(dir)
@@ -317,8 +317,8 @@ class SmugMugFS(object):
       return
 
     node = matched_nodes[-1]
-    if node['Type'] != 'Album':
-      print('Cannot upload images in node of type "%s".' % node['Type'])
+    if 'Type' not in node or node['Type'] != 'Album':
+      print(f'{matched_nodes[-1].name} is not an Album')
       return
 
     for filename in itertools.chain(*(glob.glob(f) for f in filenames)):
@@ -388,6 +388,7 @@ class SmugMugFS(object):
 
     # Make sure that the source paths exist.
     globbed = [(source, glob.glob(source)) for source in sources]
+    print(f'globbed={globbed}')
     not_found = [g[0] for g in globbed if not g[1]]
     if not_found:
       print('File%s not found:\n  %s' % (

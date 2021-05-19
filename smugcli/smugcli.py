@@ -263,7 +263,7 @@ def run(args, config=None, requests_sent=None):
                            type=arg_str_type,
                            dest='deprecated_target',
                            metavar='TARGET',
-                           help=('DEPRECATED. -t/--targer is no longer needed, '
+                           help=('DEPRECATED. -t/--target is no longer needed, '
                                  'specify the target folder as the last '
                                  'positinal argument.'))
   sync_parser.add_argument('-f', '--force',
