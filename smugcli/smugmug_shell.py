@@ -2,6 +2,7 @@
 
 import cmd
 import os
+import pathlib
 import shlex
 import sys
 import re
@@ -18,11 +19,51 @@ class SmugMugShell(cmd.Cmd):
     self.user = fs.smugmug.get_auth_user()
 
   def do_exit(self, arg):
+    'Exit the shell'
     return True
     
   def do_quit(self, arg):
+    'Exit the shell'
     return True
 
+  def do_lcd(self, arg):
+    'Change local directory'
+    if arg:
+      d = arg
+    else:
+      d = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
+
+    try:
+      os.chdir(d)
+    except FileNotFoundError:
+      print(f'{d} not found or not a directory')
+    except:
+      raise
+
+    print(os.getcwd())
+  
+  def do_lpwd(self, arg):
+    'Print local current directory'
+    print(os.getcwd())
+
+  def do_lls(self, arg):
+    'List contents of local directory'
+    if arg:
+      d = arg
+    else:
+      d = os.getcwd()
+
+    try:
+      g = pathlib.Path(d).glob('*')
+      for f in g:
+        suffix = ''
+        if f.is_dir(): suffix = '/'
+        print(str(f) + suffix)
+    except FileNotFoundError:
+      print(f'{d} not found or not a directory')
+    except:
+      raise
+    
   def setprompt(self):
     self.prompt = f'({self.user}) {self._fs.cwd}: '
   
