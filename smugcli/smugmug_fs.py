@@ -7,6 +7,7 @@ import six
 import collections
 import datetime
 import glob
+
 if six.PY2:
   from hachoir_metadata import extractMetadata
   from hachoir_parser import guessParser
@@ -153,41 +154,6 @@ class SmugMugFS(object):
                                                       set(original_ignore)))
       configs['ignore'] = updated_ignore
 
-  def download(self, user, path):
-    user = user or self._smugmug.get_auth_user()
-    matched_nodes, unmatched_dirs = self.path_to_node(user, path)
-
-    if unmatched_dirs:
-      print('"%s" not found in "%s".' % (
-        unmatched_dirs[0], matched_nodes[-1].path))
-      return
-
-    node = matched_nodes[-1]
-    if 'FileName' not in node.json:
-      print('Not a downloadable file.')
-      return
-
-    filename = node.json['FileName']
-    if node.json['IsVideo']:
-      downloaduri = node.json['Uris']['LargestVideo']['Uri']
-      result = self._smugmug.get_json(downloaduri)
-      downloadurl = result['Response']['LargestVideo']['Url']
-    else:
-      downloaduri = node.json['Uris']['ImageDownload']['Uri']
-      result = self._smugmug.get_json(downloaduri)
-      downloadurl = result['Response']['ImageDownload']['Url']
-    
-    print(f'File Name: {filename}')
-    print(f'Image Download URI: {downloaduri}')
-    print(f'Download URL: {downloadurl}')
-
-    response = self._smugmug.get_stream(downloadurl)
-    with open(filename, 'wb') as f:
-      for chunk in response.iter_content(chunk_size=10485760): 
-        f.write(chunk)
-    response.close()
-
-    
   ftypes = {
     'Folder': 'F',
     'Album': 'A',
@@ -337,6 +303,54 @@ class SmugMugFS(object):
         print('Error uploading "%s" to "%s".' % (filename, album))
         print('Server responded with %s.' % str(response))
         return None
+
+    node.reset_cache()
+
+  def download(self, user, force, paths):
+    user = user or self._smugmug.get_auth_user()
+
+    for path in paths:
+      matched_nodes, unmatched_dirs = self.path_to_node(user, path)
+
+      if unmatched_dirs:
+        print('"%s" not found in "%s".' % (
+          unmatched_dirs[0], matched_nodes[-1].path))
+        continue
+
+      node = matched_nodes[-1]
+
+      if 'FileName' in node.json:
+        nodelist = [node]
+      elif node.json['Type'].lower() == 'album':
+        nodelist = node.get_children()
+      else:
+        print(f'{node.name} ({nde.json["Type"]}) is not an album or downloadable file.')
+        continue
+
+      for dlnode in nodelist:
+
+        filename = dlnode.json['FileName']
+
+        if os.path.exists(filename) and not force:
+          print(f'{filename} already exists.')
+          continue
+      
+        if dlnode.json['IsVideo']:
+          downloaduri = dlnode.json['Uris']['LargestVideo']['Uri']
+          result = self._smugmug.get_json(downloaduri)
+          downloadurl = result['Response']['LargestVideo']['Url']
+        else:
+          downloaduri = dlnode.json['Uris']['ImageDownload']['Uri']
+          result = self._smugmug.get_json(downloaduri)
+          downloadurl = result['Response']['ImageDownload']['Url']
+    
+          print(f'Downloading {filename} from {downloadurl}')
+
+          response = self._smugmug.get_stream(downloadurl)
+          with open(filename, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=10485760): 
+              f.write(chunk)
+          response.close()
 
   def _get_common_path(self, matched_nodes, local_dirs):
     new_matched_nodes = []

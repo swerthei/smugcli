@@ -208,7 +208,8 @@ def run(args, config=None, requests_sent=None):
   upload_parser.set_defaults(func=lambda a: fs.upload(a.user, a.src, a.album))
   upload_parser.add_argument('src',
                              type=arg_str_type,
-                             nargs='+', help='Files to upload.')
+                             nargs='+',
+                             help='File(s) to upload.')
   upload_parser.add_argument('album',
                              type=arg_str_type,
                              help='Path to the album.')
@@ -220,11 +221,15 @@ def run(args, config=None, requests_sent=None):
                                    'default.'))
   # ---------------
   download_parser = subparsers.add_parser(
-    'download', help='Download one file from SmugMug.')
-  download_parser.set_defaults(func=lambda a: fs.download(a.user, a.path))
+    'download', help='Download one or more files from SmugMug into current directory.')
+  download_parser.set_defaults(func=lambda a: fs.download(a.user, a.force, a.path))
   download_parser.add_argument('path',
                                type=arg_str_type,
-                               help='SmugMug file to download.')
+                               nargs='+',
+                               help='SmugMug file(s) to download.')
+  download_parser.add_argument('-f', '--force',
+                               action='store_true',
+                               help=('Overwrite local files.'))
   download_parser.add_argument('-u', '--user',
                                type=arg_str_type,
                                default='',
