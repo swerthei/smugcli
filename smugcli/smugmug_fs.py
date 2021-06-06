@@ -7,6 +7,7 @@ import six
 import collections
 import datetime
 import glob
+import re
 
 if six.PY2:
   from hachoir_metadata import extractMetadata
@@ -74,6 +75,24 @@ class SmugMugFS(object):
   def get_root_node(self, user):
     return self._smugmug.get_root_node(user)
 
+  def resolve_multinodes(self, user, path, directory):
+    matched_nodes, unmatched_dirs = self.path_to_node(user, path)
+    if unmatched_dirs:
+      if len(unmatched_dirs) > 1:
+        print('"%s" not found in "%s".' % (
+          unmatched_dirs[0], matched_nodes[-1].path))
+        return []
+
+      regex = re.compile(unmatched_dirs[0])
+      ret = [node for node in matched_nodes[-1].get_children() if regex.fullmatch(node.name)]
+      if len(ret) == 0:
+        print('"%s" not found in "%s".' % (
+          unmatched_dirs[0], matched_nodes[-1].path))
+      return ret
+
+    node = matched_nodes[-1]
+    return [node] if 'FileName' in node or directory else node.get_children()
+  
   def path_to_node(self, user, path):
     current_node = self.get_root_node(user)
     parts = []
@@ -162,23 +181,14 @@ class SmugMugFS(object):
 
   def ls(self, user, path, details, directory, bare):
     user = user or self._smugmug.get_auth_user()
-    matched_nodes, unmatched_dirs = self.path_to_node(user, path)
+    nodelist = self.resolve_multinodes(user, path, directory)
 
-    if unmatched_dirs:
-      print('"%s" not found in "%s".' % (
-        unmatched_dirs[0], matched_nodes[-1].path))
-      return
-
-    node = matched_nodes[-1]
-    nodes = ([(path, node)] if 'FileName' in node or directory else
-             [(child.name, child) for child in node.get_children()])
-
-    for name, node in nodes:
+    for node in nodelist:
       if details:
         print(json.dumps(node.json, sort_keys=True, indent=2,
                          separators=(',', ': ')))
       elif bare:
-        print(name)
+        print(node.name)
       else:
         if 'Type' in node.json:
           if node.json['Type'] in self.ftypes:
@@ -192,7 +202,7 @@ class SmugMugFS(object):
             abbrev = 'P'
         else:
           abbrev = 'U'
-        print(f'{abbrev} {name}')
+        print(f'{abbrev} {node.name}')
 
   def cd(self, path):
     user = self._smugmug.get_auth_user()
