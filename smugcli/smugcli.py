@@ -169,12 +169,19 @@ def run(args, config=None, requests_sent=None):
                                     'default.'))
   # ---------------
   rmdir_parser = subparsers.add_parser(
-    'rmdir', help='Remove one or more folders if they are empty.')
-  rmdir_parser.set_defaults(func=lambda a: fs.rmdir(a.user, a.parents, a.dirs))
+    'rmdir', help='Remove one or more folders/albums.')
+  rmdir_parser.set_defaults(func=lambda a: fs.rmdir(a.user, a.parents, a.recurse, a.noprompt, a.dirs))
   rmdir_parser.add_argument('-p', '--parents',
                             action='store_true',
                             help=('Remove parent directory as well if they are '
                                   'empty'))
+  rmdir_parser.add_argument('-r', '--recurse',
+                            action='store_true',
+                            help=('Remove non-empty directory and all '
+                                  'recursive contents'))
+  rmdir_parser.add_argument('-n', '--noprompt',
+                            action='store_true',
+                            help=('Do not prompt for confirmation'))
   rmdir_parser.add_argument('-u', '--user',
                             type=arg_str_type,
                             default='',
@@ -182,7 +189,7 @@ def run(args, config=None, requests_sent=None):
                                   'Uses the logged-in user by default.'))
   rmdir_parser.add_argument('dirs',
                             type=arg_str_type,
-                            nargs='+', help='Folder(s) to remove.')
+                            nargs='+', help='Folder(s)/Album(s) to remove.')
   # ---------------
   rm_parser = subparsers.add_parser(
     'rm', help='Remove files from SmugMug.')

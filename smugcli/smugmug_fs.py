@@ -8,6 +8,7 @@ import collections
 import datetime
 import glob
 import re
+import fnmatch
 
 if six.PY2:
   from hachoir_metadata import extractMetadata
@@ -75,7 +76,7 @@ class SmugMugFS(object):
   def get_root_node(self, user):
     return self._smugmug.get_root_node(user)
 
-  def resolve_multinodes(self, user, path, directory):
+  def resolve_multinodes(self, user, path, directory, rematch=False):
     matched_nodes, unmatched_dirs = self.path_to_node(user, path)
     if unmatched_dirs:
       if len(unmatched_dirs) > 1:
@@ -83,7 +84,7 @@ class SmugMugFS(object):
           unmatched_dirs[0], matched_nodes[-1].path))
         return []
 
-      regex = re.compile(unmatched_dirs[0])
+      regex = re.compile(unmatched_dirs[0] if rematch else fnmatch.translate(unmatched_dirs[0]))
       ret = [node for node in matched_nodes[-1].get_children() if regex.fullmatch(node.name)]
       if len(ret) == 0:
         print('"%s" not found in "%s".' % (
@@ -241,7 +242,11 @@ class SmugMugFS(object):
       self._match_or_create_nodes(
         matched_nodes, unmatched_dirs, node_type, privacy)
 
-  def rmdir(self, user, remove_parents, dirs):
+  def _ask(self, question):
+    answer = input(question)
+    return answer.lower() in ['y', 'yes']
+
+  def rmdir(self, user, remove_parents, recurse, noprompt, dirs):
     user = user or self._smugmug.get_auth_user()
     for dir in dirs:
       matched_nodes, unmatched_dirs = self.path_to_node(user, dir)
@@ -250,24 +255,34 @@ class SmugMugFS(object):
         continue
 
       matched_nodes.pop(0) # don't try to remove the root directory
-      while matched_nodes:
-        current_dir = matched_nodes[-1].path
-        node = matched_nodes.pop()
-        if len(node.get_children({'count': 1})):
-          print('Cannot delete %s: "%s" is not empty.' % (
-            node['Type'], current_dir))
-          break
+      node = matched_nodes.pop()
+      current_dir = node.path
+      if 'Type' not in node.json:
+        print(f'"{node.path}" is not an album or directory')
+        continue
 
-        print('Deleting "%s".' % current_dir)
-        node.delete()
+      childcount = len(node.get_children({'count': 1}))
+      if not recurse and childcount:
+        print('Cannot delete %s: "%s" is not empty.' % (
+          node['Type'], current_dir))
+        break
 
-        if not remove_parents:
-          break
+      if not noprompt:
+        if not self._ask('Remove %s %s node "%s"? ' % ('empty' if childcount == 0 else 'non-empty', node['Type'], node.path)):
+          continue;
+      print('Removing "%s".' % current_dir)
+      node.delete()
 
-  def _ask(self, question):
-    answer = input(question)
-    return answer.lower() in ['y', 'yes']
+      if remove_parents:
+        while matched_nodes:
+          node = matched_nodes.pop()
+          if len(node.get_children({'count': 1})) > 0:
+            break
+          print(f'Removing "{node.path}".')
+          node.delete()
 
+      node.parent.reset_cache()
+      
   def rm(self, user, force, recursive, paths):
     user = user or self._smugmug.get_auth_user()
     for path in paths:

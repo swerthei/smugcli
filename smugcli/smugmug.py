@@ -163,6 +163,10 @@ class Node(object):
     else:
       return os.sep + self.name
 
+  @property
+  def parent(self):
+    return self._parent
+
   def get(self, url_name, **kwargs):
     uri = self.uri(url_name)
     return self._smugmug.get(uri, parent=self, **kwargs)
