@@ -170,7 +170,7 @@ def run(args, config=None, requests_sent=None):
   # ---------------
   rmdir_parser = subparsers.add_parser(
     'rmdir', help='Remove one or more folders/albums.')
-  rmdir_parser.set_defaults(func=lambda a: fs.rmdir(a.user, a.parents, a.recurse, a.noprompt, a.dirs))
+  rmdir_parser.set_defaults(func=lambda a: fs.rmdir(a.user, a.parents, a.recurse, a.force, a.dirs))
   rmdir_parser.add_argument('-p', '--parents',
                             action='store_true',
                             help=('Remove parent directory as well if they are '
@@ -179,9 +179,9 @@ def run(args, config=None, requests_sent=None):
                             action='store_true',
                             help=('Remove non-empty directory and all '
                                   'recursive contents'))
-  rmdir_parser.add_argument('-n', '--noprompt',
+  rmdir_parser.add_argument('-f', '--force',
                             action='store_true',
-                            help=('Do not prompt for confirmation'))
+                            help=('Do not prompt before deleting files'))
   rmdir_parser.add_argument('-u', '--user',
                             type=arg_str_type,
                             default='',

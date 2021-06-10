@@ -158,6 +158,7 @@ class Node(object):
 
   @property
   def path(self):
+    #print(f'in path self.name={self.name}')
     if self._parent is not None:
       return os.path.join(self._parent.path, self.name)
     else:
@@ -212,6 +213,7 @@ class Node(object):
     return id(self)
 
   def get_children(self, params=None):
+    print(f'in get_children, name={self.name}, path={self.path}')
     if 'Type' not in self._json:
       raise UnexpectedResponseError('Node does not have a "Type" attribute.')
 

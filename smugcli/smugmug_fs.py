@@ -246,7 +246,7 @@ class SmugMugFS(object):
     answer = input(question)
     return answer.lower() in ['y', 'yes']
 
-  def rmdir(self, user, remove_parents, recurse, noprompt, dirs):
+  def rmdir(self, user, remove_parents, recurse, force, dirs):
     user = user or self._smugmug.get_auth_user()
     for dir in dirs:
       matched_nodes, unmatched_dirs = self.path_to_node(user, dir)
@@ -257,8 +257,8 @@ class SmugMugFS(object):
       matched_nodes.pop(0) # don't try to remove the root directory
       node = matched_nodes.pop()
       current_dir = node.path
-      if 'Type' not in node.json:
-        print(f'"{node.path}" is not an album or directory')
+      if 'Type' not in node:
+        print(f'"{current_dir}" is not an album or directory')
         continue
 
       childcount = len(node.get_children({'count': 1}))
@@ -267,7 +267,7 @@ class SmugMugFS(object):
           node['Type'], current_dir))
         break
 
-      if not noprompt:
+      if not force:
         if not self._ask('Remove %s %s node "%s"? ' % ('empty' if childcount == 0 else 'non-empty', node['Type'], node.path)):
           continue;
       print('Removing "%s".' % current_dir)
@@ -286,19 +286,16 @@ class SmugMugFS(object):
   def rm(self, user, force, recursive, paths):
     user = user or self._smugmug.get_auth_user()
     for path in paths:
-      matched_nodes, unmatched_dirs = self.path_to_node(user, path)
-      if unmatched_dirs:
-        print('"%s" not found in "%s".' % (
-          unmatched_dirs[0], matched_nodes[-1].path))
-        continue
+      nodelist = self.resolve_multinodes(user, path, True)
+      for node in nodelist:
+        nodetype = node['Type'] if 'Type' in node else 'File'
 
-      node = matched_nodes[-1]
-      if recursive or len(node.get_children({'count': 1})) == 0:
-        if force or self._ask('Remove %s node "%s"? ' % (node['Type'], path)):
-          print('Removing "%s".' % path)
-          node.delete()
-      else:
-        print('Folder "%s" is not empty.' % path)
+        if recursive or 'Type' not in node or len(node.get_children({'count': 1})) == 0:
+          if force or self._ask('Remove %s node "%s"? ' % (nodetype, node.path)):
+            print('Removing "%s".' % node.path)
+            node.delete()
+        else:
+          print('%s "%s" is not empty.' % (nodetype, node.path))
 
   def upload(self, user, filenames, album):
     user = user or self._smugmug.get_auth_user()
