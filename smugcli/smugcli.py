@@ -244,6 +244,26 @@ def run(args, config=None, requests_sent=None):
                                      'accessed. Uses the logged-in user by '
                                      'default.'))
   # ---------------
+  newdn_parser = subparsers.add_parser(
+    'newdn', help='Download one or more files from SmugMug into current directory.')
+  newdn_parser.set_defaults(func=lambda a: fs.newdn(a.user, a.force, a.path))
+  newdn_parser.add_argument('path',
+                            type=arg_str_type,
+                            nargs='+',
+                            help='SmugMug file(s) to download.')
+  newdn_parser.add_argument('-f', '--force',
+                            action='store_true',
+                            help=('Overwrite local files.'))
+  newdn_parser.add_argument('-r', '--recurse',
+                            action='store_true',
+                            help=('Descend recursively into folders and albums.'))
+  newdn_parser.add_argument('-u', '--user',
+                            type=arg_str_type,
+                            default='',
+                            help=('User whose SmugMug account is to be '
+                                  'accessed. Uses the logged-in user by '
+                                  'default.'))
+  # ---------------
   sync_parser = subparsers.add_parser(
     'sync',
     help='Synchronize all local albums with SmugMug.',

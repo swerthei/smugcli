@@ -213,7 +213,6 @@ class Node(object):
     return id(self)
 
   def get_children(self, params=None):
-    print(f'in get_children, name={self.name}, path={self.path}')
     if 'Type' not in self._json:
       raise UnexpectedResponseError('Node does not have a "Type" attribute.')
 
@@ -322,7 +321,7 @@ def Wrapper(smugmug, json, parent=None):
 
 
 class StreamingUpload(object):
-  def __init__(self, data, progress_fn, chunk_size=1<<13):
+  def __init__(self, data, progress_fn):
     self._data = io.BytesIO(data)
     self._len = len(data)
     self._progress_fn = progress_fn
@@ -442,10 +441,13 @@ class SmugMug(object):
     reply = self.get_json(path, **kwargs)
     return Wrapper(self, reply, parent)
 
-  def get_stream(self, url):
+  def download(self, url, filename, progress_fn=None):
     req = requests.Request('GET', url, auth=self.oauth).prepare()
     resp = self._session.send(req, stream=True)
-    return resp
+    with open(filename, 'wb') as f:
+      for chunk in resp.iter_content(chunk_size=10485760): 
+        f.write(chunk)
+    resp.close()
   
   def post(self, path, data=None, json=None, **kwargs):
     req = requests.Request('POST',

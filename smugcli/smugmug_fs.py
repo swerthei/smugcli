@@ -332,26 +332,14 @@ class SmugMugFS(object):
     user = user or self._smugmug.get_auth_user()
 
     for path in paths:
-      matched_nodes, unmatched_dirs = self.path_to_node(user, path)
-
-      if unmatched_dirs:
-        print('"%s" not found in "%s".' % (
-          unmatched_dirs[0], matched_nodes[-1].path))
-        continue
-
-      node = matched_nodes[-1]
-
-      if 'FileName' in node.json:
-        nodelist = [node]
-      elif node.json['Type'].lower() == 'album':
-        nodelist = node.get_children()
-      else:
-        print(f'{node.name} ({nde.json["Type"]}) is not an album or downloadable file.')
-        continue
-
+      nodelist = self.resolve_multinodes(user, path, True)
       for dlnode in nodelist:
 
-        filename = dlnode.json['FileName']
+        if 'FileName' not in dlnode:
+          print(f'{dlnode.name} is not a downloadable file.')
+          continue
+
+        filename = dlnode['FileName']
 
         if os.path.exists(filename) and not force:
           print(f'{filename} already exists.')
@@ -367,12 +355,43 @@ class SmugMugFS(object):
           downloadurl = result['Response']['ImageDownload']['Url']
     
           print(f'Downloading {filename} from {downloadurl}')
+          self._smugmug.download(downloadurl, filename)
 
-          response = self._smugmug.get_stream(downloadurl)
-          with open(filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=10485760): 
-              f.write(chunk)
-          response.close()
+  def newdn(self, user, force, paths):
+    user = user or self._smugmug.get_auth_user()
+
+    for path in paths:
+      nodelist = self.resolve_multinodes(user, path, True)
+      for dlnode in nodelist:
+
+        # Smugmug does not mix media files and albums/folders in the
+        # same parent folder. So if the first item in the list is a
+        # media file then all items are, and if the first item in the
+        # list is a container node then all items are.
+
+        if 'FileName' not in dlnode:
+          print(f'{dlnode.name} is not a downloadable file.')
+          continue
+
+        filename = dlnode['FileName']
+
+        if os.path.exists(filename) and not force:
+          print(f'{filename} already exists.')
+          continue
+      
+        if dlnode.json['IsVideo']:
+          downloaduri = dlnode.json['Uris']['LargestVideo']['Uri']
+          result = self._smugmug.get_json(downloaduri)
+          downloadurl = result['Response']['LargestVideo']['Url']
+          size = result['Response']['LargestVideo']['Size']
+        else:
+          downloaduri = dlnode.json['Uris']['ImageDownload']['Uri']
+          size = dlnode.json['ArchivedSize']
+          result = self._smugmug.get_json(downloaduri)
+          downloadurl = result['Response']['ImageDownload']['Url']
+    
+        print(f'Downloading {filename} ({size}) from {downloadurl}')
+        self._smugmug.download(downloadurl, filename)
 
   def _get_common_path(self, matched_nodes, local_dirs):
     new_matched_nodes = []
@@ -408,7 +427,7 @@ class SmugMugFS(object):
       return
 
     # The argparse library doesn't seem to support having two positional
-    # arguments, the first variable in length length and the second optional.
+    # arguments, the first variable in length and the second optional.
     # The first positional argument always eagerly grabs all values specified.
     # We therefore need to distribute that last value to the second argument
     # when it's specified.
@@ -417,8 +436,8 @@ class SmugMugFS(object):
     else:
       target = target[0]
 
-    # Approximate worse case: each folder and file threads work on a different
-    # folders, and all folders are 5 level deep.
+    # Approximate worse case: each folder and file thread works on a different
+    # folder, and all folders are 5 level deep.
     self._smugmug.garbage_collector.set_max_children_cache(
       folder_threads + file_threads + 5)
 
