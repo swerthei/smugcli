@@ -378,19 +378,14 @@ class SmugMugFS(object):
         if os.path.exists(filename) and not force:
           print(f'{filename} already exists.')
           continue
-      
-        if dlnode.json['IsVideo']:
-          downloaduri = dlnode.json['Uris']['LargestVideo']['Uri']
-          result = self._smugmug.get_json(downloaduri)
-          downloadurl = result['Response']['LargestVideo']['Url']
-          size = result['Response']['LargestVideo']['Size']
-        else:
-          downloaduri = dlnode.json['Uris']['ImageDownload']['Uri']
-          size = dlnode.json['ArchivedSize']
-          result = self._smugmug.get_json(downloaduri)
-          downloadurl = result['Response']['ImageDownload']['Url']
-    
-        print(f'Downloading {filename} ({size}) from {downloadurl}')
+
+        locator = 'LargestVideo' if dlnode.json['IsVideo'] else 'ImageDownload'
+        downloaduri = dlnode.json['Uris'][locator]['Uri']
+        result = self._smugmug.get_json(downloaduri)
+        downloadurl = result['Response'][locator]['Url']
+        size = result['Response']['LargestVideo']['Size'] if dlnode.json['IsVideo'] else dlnode.json['ArchivedSize']
+        
+        print(f'Downloading {filename} ({size:,}) from {downloadurl}')
         self._smugmug.download(downloadurl, filename)
 
   def _get_common_path(self, matched_nodes, local_dirs):
