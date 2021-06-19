@@ -160,9 +160,10 @@ class Node(object):
   def path(self):
     #print(f'in path self.name={self.name}')
     if self._parent is not None:
-      return os.path.join(self._parent.path, self.name)
+      mycontrib = '' if 'Type' in self._json and self._json['Type'] == 'Album' else os.sep + self.name
+      return self._parent.path + mycontrib
     else:
-      return os.sep + self.name
+      return ''
 
   @property
   def parent(self):

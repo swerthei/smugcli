@@ -345,48 +345,44 @@ class SmugMugFS(object):
           print(f'{filename} already exists.')
           continue
       
-        if dlnode.json['IsVideo']:
-          downloaduri = dlnode.json['Uris']['LargestVideo']['Uri']
-          result = self._smugmug.get_json(downloaduri)
-          downloadurl = result['Response']['LargestVideo']['Url']
-        else:
-          downloaduri = dlnode.json['Uris']['ImageDownload']['Uri']
-          result = self._smugmug.get_json(downloaduri)
-          downloadurl = result['Response']['ImageDownload']['Url']
-    
-          print(f'Downloading {filename} from {downloadurl}')
-          self._smugmug.download(downloadurl, filename)
-
-  def newdn(self, user, force, paths):
-    user = user or self._smugmug.get_auth_user()
-
-    for path in paths:
-      nodelist = self.resolve_multinodes(user, path, True)
-      for dlnode in nodelist:
-
-        # Smugmug does not mix media files and albums/folders in the
-        # same parent folder. So if the first item in the list is a
-        # media file then all items are, and if the first item in the
-        # list is a container node then all items are.
-
-        if 'FileName' not in dlnode:
-          print(f'{dlnode.name} is not a downloadable file.')
-          continue
-
-        filename = dlnode['FileName']
-
-        if os.path.exists(filename) and not force:
-          print(f'{filename} already exists.')
-          continue
-
-        locator = 'LargestVideo' if dlnode.json['IsVideo'] else 'ImageDownload'
+        video = dlnode.json['IsVideo']
+        locator = 'LargestVideo' if video else 'ImageDownload'
         downloaduri = dlnode.json['Uris'][locator]['Uri']
         result = self._smugmug.get_json(downloaduri)
         downloadurl = result['Response'][locator]['Url']
-        size = result['Response']['LargestVideo']['Size'] if dlnode.json['IsVideo'] else dlnode.json['ArchivedSize']
+        size = result['Response']['LargestVideo']['Size'] if video else dlnode.json['ArchivedSize']
         
         print(f'Downloading {filename} ({size:,}) from {downloadurl}')
         self._smugmug.download(downloadurl, filename)
+
+  def newdn(self, user, force, recurse, paths):
+    user = user or self._smugmug.get_auth_user()
+
+    albums = []
+    files = []
+
+    def process_node(node):
+      if 'FileName' in node:
+        files.append(node)
+      elif node['Type'] == 'Folder':
+        if recurse:
+          for child in node.get_children:
+            process_node(child)
+      elif node['Type'] == 'Album':
+        albums.append(node)
+    
+    for path in paths:
+      nodelist = self.resolve_multinodes(user, path, True)
+      for node in nodelist:
+        process_node(node)
+
+    print('Files to process:')
+    for file in files:
+      print(f'  {file.path}')
+    
+    print('Albums to process:')
+    for album in albums:
+      print(f'  {album.path}')
 
   def _get_common_path(self, matched_nodes, local_dirs):
     new_matched_nodes = []

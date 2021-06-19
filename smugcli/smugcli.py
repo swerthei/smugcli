@@ -246,7 +246,7 @@ def run(args, config=None, requests_sent=None):
   # ---------------
   newdn_parser = subparsers.add_parser(
     'newdn', help='Download one or more files from SmugMug into current directory.')
-  newdn_parser.set_defaults(func=lambda a: fs.newdn(a.user, a.force, a.path))
+  newdn_parser.set_defaults(func=lambda a: fs.newdn(a.user, a.force, a.recurse, a.path))
   newdn_parser.add_argument('path',
                             type=arg_str_type,
                             nargs='+',
