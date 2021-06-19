@@ -366,7 +366,7 @@ class SmugMugFS(object):
         files.append(node)
       elif node['Type'] == 'Folder':
         if recurse:
-          for child in node.get_children:
+          for child in node.get_children():
             process_node(child)
       elif node['Type'] == 'Album':
         albums.append(node)
@@ -377,11 +377,11 @@ class SmugMugFS(object):
         process_node(node)
 
     print('Files to process:')
-    for file in files:
+    for file in sorted(files):
       print(f'  {file.path}')
     
     print('Albums to process:')
-    for album in albums:
+    for album in sorted(albums):
       print(f'  {album.path}')
 
   def _get_common_path(self, matched_nodes, local_dirs):

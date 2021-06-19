@@ -160,7 +160,7 @@ class Node(object):
   def path(self):
     #print(f'in path self.name={self.name}')
     if self._parent is not None:
-      mycontrib = '' if 'Type' in self._json and self._json['Type'] == 'Album' else os.sep + self.name
+      mycontrib = '' if 'AlbumKey' in self._json else os.sep + self.name
       return self._parent.path + mycontrib
     else:
       return ''
@@ -210,6 +210,12 @@ class Node(object):
   def __ne__(self, other):
     return self._json != other
 
+  def __lt__(self, other):
+    return self.path < other.path
+  
+  def __gt__(self, other):
+    return self.path > other.path
+  
   def __hash__(self):
     return id(self)
 
