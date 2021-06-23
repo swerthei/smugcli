@@ -91,7 +91,7 @@ def run(args, config=None, requests_sent=None):
     'ls',
     help='List the content of a folder or album.',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.long, a.directory, a.bare))
+  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.long, a.directory, a.re_match, a.recurse, a.bare))
   ls_parser.add_argument('path',
                          type=arg_str_type,
                          nargs='?',
@@ -117,6 +117,14 @@ def run(args, config=None, requests_sent=None):
                                ' P (Photo),'
                                ' V (Video),'
                                ' U (Unknown)'),
+                         action='store_true')
+  ls_parser.add_argument('-m', '--re_match',
+                         help=('Match with full regular expressions.'
+                               'If not specified then match using standard'
+                               'glob syntax.'),
+                         action='store_true')
+  ls_parser.add_argument('-R', '--recurse',
+                         help=('List recursively.'),
                          action='store_true')
   ls_parser.add_argument('-u', '--user',
                          type=arg_str_type,

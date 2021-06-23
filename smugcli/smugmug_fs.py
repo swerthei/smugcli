@@ -76,7 +76,30 @@ class SmugMugFS(object):
   def get_root_node(self, user):
     return self._smugmug.get_root_node(user)
 
-  def resolve_multinodes(self, user, path, directory, rematch=False):
+  def glob(self, user, path, directory, re_match=False):
+    # Globbing algorithm
+    # split path into pathlist
+    # worklist = [rootnode]
+    # for pathitem in pathlist:
+    #   worklist2 = []
+    #   for workitem in worklist:
+    #     worklist2.extend(children of workitem that match pathitem)
+    #   worklist = worklist2
+    current_node = self.get_root_node(user)
+    pathlist = []
+    if user == self._smugmug.get_auth_user() and (len(path) == 0 or path[0] != os.sep):
+      pathlist.extend(list(filter(bool, self._cwd.split(os.sep))))
+    pathlist.extend(list(filter(bool, path.split(os.sep))))
+    worklist = [self.get_root_node(user)]
+    for pathitem in pathlist:
+      worklist2 = []
+      for workitem in worklist:
+        regex = re.compile(pathitem if re_match else fnmatch.translate(pathitem))
+        worklist2.extend([node for node in workitem.get_children() if regex.fullmatch(node.name)])
+      worklist = worklist2
+    return worklist
+  
+  def resolve_multinodes(self, user, path, directory, re_match=False):
     matched_nodes, unmatched_dirs = self.path_to_node(user, path)
     if unmatched_dirs:
       if len(unmatched_dirs) > 1:
@@ -84,7 +107,7 @@ class SmugMugFS(object):
           unmatched_dirs[0], matched_nodes[-1].path))
         return []
 
-      regex = re.compile(unmatched_dirs[0] if rematch else fnmatch.translate(unmatched_dirs[0]))
+      regex = re.compile(unmatched_dirs[0] if re_match else fnmatch.translate(unmatched_dirs[0]))
       ret = [node for node in matched_nodes[-1].get_children() if regex.fullmatch(node.name)]
       if len(ret) == 0:
         print('"%s" not found in "%s".' % (
@@ -180,9 +203,10 @@ class SmugMugFS(object):
     'System Album': 'S'
     }
 
-  def ls(self, user, path, details, directory, bare):
+  def ls(self, user, path, details, directory, re_match, recurse, bare):
     user = user or self._smugmug.get_auth_user()
-    nodelist = self.resolve_multinodes(user, path, directory)
+    nodelist = self.glob(user, path, directory, re_match)
+    #nodelist = self.resolve_multinodes(user, path, directory, re_match)
 
     for node in nodelist:
       if details:
@@ -203,7 +227,7 @@ class SmugMugFS(object):
             abbrev = 'P'
         else:
           abbrev = 'U'
-        print(f'{abbrev} {node.name}')
+        print(f'{abbrev} {node.path}')
 
   def cd(self, path):
     user = self._smugmug.get_auth_user()
