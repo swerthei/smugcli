@@ -203,31 +203,54 @@ class SmugMugFS(object):
     'System Album': 'S'
     }
 
-  def ls(self, user, path, details, directory, re_match, recurse, bare):
+  def printnode(self, node, details, bare, fullpath):
+    printname = node.path if fullpath else node.name
+    if details:
+      print(json.dumps(node.json, sort_keys=True, indent=2,
+                       separators=(',', ': ')))
+    elif bare:
+      print(printname)
+    else:
+      if 'Type' in node:
+        if node['Type'] in self.ftypes:
+          abbrev = self.ftypes[node['Type']]
+        else:
+          abbrev = 'Unknown Type'
+      elif 'FileName' in node:
+        if node['IsVideo']:
+          abbrev = 'V'
+        else:
+          abbrev = 'P'
+      else:
+        abbrev = 'U'
+      print(f'{abbrev} {printname}')
+
+  def process_children(self, node, recurse, details, bare, fullpath, print_header, processfn):
+    if print_header:
+      print(f'\n{node.path}:')
+    children = node.get_children()
+    for child in children:
+      processfn(child, details, bare, fullpath)
+
+    if recurse:
+      for child in children:
+        if 'Type' in child:
+          self.process_children(child, recurse, details, bare, fullpath, True, processfn)
+    
+  def ls(self, user, path, directory, re_match, recurse, details, bare):
     user = user or self._smugmug.get_auth_user()
     nodelist = self.glob(user, path, directory, re_match)
     #nodelist = self.resolve_multinodes(user, path, directory, re_match)
+    multiple = len(nodelist) > 1
 
     for node in nodelist:
-      if details:
-        print(json.dumps(node.json, sort_keys=True, indent=2,
-                         separators=(',', ': ')))
-      elif bare:
-        print(node.name)
-      else:
-        if 'Type' in node.json:
-          if node.json['Type'] in self.ftypes:
-            abbrev = self.ftypes[node.json['Type']]
-          else:
-            abbrev = 'Unknown Type'
-        elif 'FileName' in node.json:
-          if node.json['IsVideo']:
-            abbrev = 'V'
-          else:
-            abbrev = 'P'
-        else:
-          abbrev = 'U'
-        print(f'{abbrev} {node.path}')
+      if multiple or 'Type' not in node or directory:
+        self.printnode(node, details, bare, True)
+
+    if not directory:
+      for node in nodelist:
+        if 'Type' in node:
+          self.process_children(node, recurse, details, bare, False, multiple, self.printnode)
 
   def cd(self, path):
     user = self._smugmug.get_auth_user()

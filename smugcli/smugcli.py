@@ -42,6 +42,7 @@ def run(args, config=None, requests_sent=None):
   def signal_handler(signum, frame):
     print('Aborting...')
     fs.abort()
+    
   def atexit_handler():
     fs.abort()
 
@@ -91,7 +92,7 @@ def run(args, config=None, requests_sent=None):
     'ls',
     help='List the content of a folder or album.',
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.long, a.directory, a.re_match, a.recurse, a.bare))
+  ls_parser.set_defaults(func=lambda a: fs.ls(a.user, a.path, a.directory, a.re_match, a.recurse, a.long, a.bare))
   ls_parser.add_argument('path',
                          type=arg_str_type,
                          nargs='?',
