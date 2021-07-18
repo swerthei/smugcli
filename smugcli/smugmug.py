@@ -226,7 +226,8 @@ class Node(object):
     params = params or {}
     params = {
       'start': params.get('start', 1),
-      'count': params.get('count', self._smugmug.config.get('page_size', 1000))}
+      'count': params.get('count', self._smugmug.config.get('page_size', 1000)),
+      'SortDirection': 'Ascending', 'SortMethod': 'Name'}
 
     if self._json['Type'] == 'Album':
       return self.get('Album').get('AlbumImages', params=params)
